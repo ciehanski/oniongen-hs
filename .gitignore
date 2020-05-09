@@ -1,0 +1,4 @@
+.stack-work/
+.git/
+stack.yaml.lock
+dist-newstyle/
