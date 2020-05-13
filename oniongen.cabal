@@ -1,14 +1,13 @@
 name:                oniongen
 version:             0.1.0.0
--- synopsis:
--- description:
-homepage:            https://github.com/ciehanski/oniongen#readme
+homepage:            https://github.com/ciehanski/oniongen-hs
+bug-reports:         https://github.com/ciehanski/oniongen-hs/issues
 license:             BSD3
 license-file:        LICENSE
 author:              Ryan Ciehanski
 maintainer:          ryan@ciehanski.com
 copyright:           2020 Ryan Ciehanski
-category:            Web
+category:            Data
 build-type:          Simple
 cabal-version:       >=1.10
 extra-source-files:  README.md
@@ -21,4 +20,7 @@ executable oniongen
                      , ed25519
                      , bytestring
                      , cryptohash
-                     , byteable
+                     , base32
+                     , directory
+                     , binary
+                     , regex-tdfa
