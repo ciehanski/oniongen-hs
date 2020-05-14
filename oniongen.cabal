@@ -1,5 +1,7 @@
 name:                oniongen
 version:             0.1.0.0
+synopsis:            
+description:         
 homepage:            https://github.com/ciehanski/oniongen-hs
 bug-reports:         https://github.com/ciehanski/oniongen-hs/issues
 license:             BSD3
@@ -19,8 +21,15 @@ executable oniongen
   build-depends:       base >= 4.7 && < 5
                      , ed25519
                      , bytestring
-                     , cryptohash
+                     , cryptonite
                      , base32
                      , directory
                      , binary
                      , regex-tdfa
+                     , memory
+
+ ghc-options:          -Wall -Wno-missing-signatures -O2
+
+source-repository head
+  type:     git
+  location: https://github.com/ciehanski/oniongen-hs

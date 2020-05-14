@@ -2,14 +2,15 @@
 module Main where
 
 import           Control.Concurrent
-import qualified Crypto.Hash            as H
+import qualified Crypto.Hash            as H (Digest, SHA3_256, hash)
 import           Crypto.Sign.Ed25519
 import           Data.Binary.Put
+import           Data.ByteArray         (convert)
 import qualified Data.ByteString        as B
-import           Data.ByteString.Base32
+import           Data.ByteString.Base32 (encodeBase32')
 import qualified Data.ByteString.Char8  as C
 import qualified Data.ByteString.Lazy   as BL
-import           Data.Char
+import           Data.Char              (toLower)
 import           System.Directory       (createDirectoryIfMissing)
 import           System.Environment     (getArgs)
 import qualified System.IO              as Sys
@@ -23,9 +24,6 @@ main = do
   -- Compile regex from 1st argument provided
   let rgx = args !! 1 :: String
 
-  -- TODO Get number of addresses to generate from 2nd argument provided
-  --let addrNum = read $ args !! 2 :: Int
-
   -- Buffer of valid onion addresses found
   onionAddress <- newEmptyMVar
 
@@ -36,7 +34,7 @@ main = do
   -- Wait 'til generate is complete then print the result
   C.putStrLn =<< takeMVar onionAddress
 
-generate :: MVar C.ByteString -> String -> IO ()
+generate :: MVar B.ByteString -> String -> IO ()
 generate addr rgx = do
   -- Create an Ed25519 keypair
   (pk, sk) <- createKeypair
@@ -49,7 +47,7 @@ generate addr rgx = do
   if onionAddress =~ rgx :: Bool
     then do
         saveKeypairs (B.concat [onionAddress, C.pack ".onion"]) rgx pk sk
-        putMVar addr $! B.concat [onionAddress, C.pack ".onion"]
+        putMVar addr $ B.concat [onionAddress, C.pack ".onion"]
     else
         generate addr rgx
 
@@ -62,13 +60,17 @@ saveKeypairs onionAddress rgx pk sk = do
 
 serializeChecksum :: PublicKey -> Put
 serializeChecksum pk = do
-  -- checksum = H(".onion checksum" || pubkey || version)
+  -- checksum = SHA3_256(".onion checksum" || pubkey || version)
   putStringUtf8 ".onion checksum"
   putByteString $ unPublicKey pk
   putInt8 3
 
 genChecksum :: PublicKey -> B.ByteString
-genChecksum pk = B.concat $ BL.toChunks $ runPut $ serializeChecksum pk
+genChecksum pk =
+  let
+    chksum = B.concat $ BL.toChunks $ runPut $ serializeChecksum pk
+    hashedChksum = H.hash chksum :: H.Digest H.SHA3_256
+  in convert hashedChksum
 
 serializeAddress :: PublicKey -> B.ByteString -> Put
 serializeAddress pk chksum = do
