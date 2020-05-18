@@ -27,6 +27,7 @@ executable oniongen
                      , binary
                      , regex-tdfa
                      , memory
+                     , timeit
 
  ghc-options:          -Wall -Wno-missing-signatures -O2
 

@@ -11,28 +11,31 @@ import           Data.ByteString.Base32 (encodeBase32')
 import qualified Data.ByteString.Char8  as C
 import qualified Data.ByteString.Lazy   as BL
 import           Data.Char              (toLower)
-import           System.Directory       (createDirectoryIfMissing)
+import           System.Directory       (createDirectoryIfMissing,
+                                         getHomeDirectory)
 import           System.Environment     (getArgs)
-import qualified System.IO              as Sys
+import           System.TimeIt          (timeIt)
 import           Text.Regex.TDFA
 
 main :: IO ()
 main = do
-  -- Get arguments
-  args <- getArgs
-
   -- Compile regex from 1st argument provided
+  args <- getArgs
   let rgx = args !! 1 :: String
 
-  -- Buffer of valid onion addresses found
-  onionAddress <- newEmptyMVar
+  -- Check if regex argument was provided and fail if otherwise
+  if null args || null rgx then
+    putStrLn "Regex argument must be provided. Exiting..."
+  else do
+    -- MVar of valid onion address found
+    onionAddress <- newEmptyMVar
 
-  -- Run this bad boy in another thread
-  Sys.putStrLn "Generating..."
-  forkIO $ generate onionAddress rgx
+    -- Run this bad boy in another thread
+    putStrLn "Generating..."
+    forkIO $ generate onionAddress rgx
 
-  -- Wait 'til generate is complete then print the result
-  C.putStrLn =<< takeMVar onionAddress
+    -- Wait 'til generate is complete then print the result
+    timeIt $ C.putStrLn =<< takeMVar onionAddress
 
 generate :: MVar B.ByteString -> String -> IO ()
 generate addr rgx = do
@@ -42,21 +45,22 @@ generate addr rgx = do
   -- Generate onion address from public key and checksum
   let onionAddress = genOnionAddress pk $ genChecksum pk
 
-  -- Compare onion address with regex argument
-  -- If no match recursively call the generate function
-  if onionAddress =~ rgx :: Bool
-    then do
-        saveKeypairs (B.concat [onionAddress, C.pack ".onion"]) rgx pk sk
-        putMVar addr $ B.concat [onionAddress, C.pack ".onion"]
-    else
-        generate addr rgx
+  -- If regex doesn't match the generated onion address, recursively
+  -- call the generate function
+  if onionAddress =~ rgx then do
+    saveKeypairs onionAddress rgx pk sk
+    putMVar addr onionAddress
+  else
+    generate addr rgx
 
 saveKeypairs :: B.ByteString -> String -> PublicKey -> SecretKey -> IO ()
 saveKeypairs onionAddress rgx pk sk = do
-  createDirectoryIfMissing True "oniongen"
-  B.writeFile ("oniongen/" ++ rgx ++ ".pub") $ unPublicKey pk
-  B.writeFile ("oniongen/" ++ rgx) $ unSecretKey sk
-  B.writeFile ("oniongen/" ++ rgx ++ ".onion") onionAddress
+  homeDir <- getHomeDirectory
+  let oniongenDir = homeDir ++ "/oniongen/"
+  createDirectoryIfMissing True oniongenDir
+  B.writeFile (oniongenDir ++ rgx ++ ".pub") $ unPublicKey pk
+  B.writeFile (oniongenDir ++ rgx) $ unSecretKey sk
+  B.writeFile (oniongenDir ++ rgx ++ "_hostname.txt") onionAddress
 
 serializeChecksum :: PublicKey -> Put
 serializeChecksum pk = do
@@ -82,4 +86,4 @@ serializeAddress pk chksum = do
 genOnionAddress :: PublicKey -> B.ByteString -> B.ByteString
 genOnionAddress pk chksum =
   let addr = B.concat $ BL.toChunks $ runPut $ serializeAddress pk chksum
-   in C.map toLower $ encodeBase32' addr
+   in C.map toLower $ B.concat [encodeBase32' addr, C.pack ".onion"]
