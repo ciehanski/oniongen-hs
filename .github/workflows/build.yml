@@ -12,4 +12,4 @@ jobs:
           cabal-version: 'latest'
           enable-stack: true
           stack-version: 'latest'
-      - run: runhaskell src/Main.hs
+      - run: stack build 
