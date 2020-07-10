@@ -2,11 +2,8 @@ on: [push, pull_request]
 name: build
 jobs:
   runhaskell:
-    strategy:
-         matrix:
-           os: [ubuntu-latest, macOS-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
     name: oniongen-hs
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-haskell@v1.1
