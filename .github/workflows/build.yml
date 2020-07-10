@@ -2,14 +2,28 @@ on: [push, pull_request]
 name: build
 jobs:
   runhaskell:
-    name: oniongen-hs
-    runs-on: ubuntu-latest
+    strategy:
+         matrix:
+           os: [ubuntu-latest, macOS-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-haskell@v1.1
-        with:
-          ghc-version: '8.8.3'
-          cabal-version: 'latest'
-          enable-stack: true
-          stack-version: 'latest'
-      - run: stack build 
+    - name: oniongen-hs
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v2
+        - uses: actions/setup-haskell@v1.1
+          with:
+            ghc-version: '8.8.3'
+            cabal-version: 'latest'
+            enable-stack: true
+            stack-version: 'latest'
+        - run: stack build 
+
+    - name: Upload Artifacts
+      id: upload-artifacts
+      continue-on-error: true
+      if: success() || failure()
+      uses: actions/upload-artifact@v2
+      with:
+        name: oniongen-hs-artifacts
+        path: artifacts
